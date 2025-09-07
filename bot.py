@@ -1,5 +1,5 @@
 from telegram import Update, ReplyKeyboardMarkup
-from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext
+from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 import os
 
 TOKEN = os.getenv('TOKEN')
@@ -9,37 +9,32 @@ match_database = {
     "Ман Сити - Ливерпуль": "🔥 Анализ матча Ман Сити - Ливерпуль:\n\nМан Сити дома силен, но Ливерпуль в этом сезоне неудержим. Ожидается много голов. Возможен счет 2-2.",
 }
 
-def start_command(update: Update, context: CallbackContext):
+async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [['Матчи сегодня']]
     reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
-    update.message.reply_text('Привет! Я футбольный аналитик. Нажми «Матчи сегодня», чтобы увидеть игры.', reply_markup=reply_markup)
+    await update.message.reply_text('Привет! Я футбольный аналитик. Нажми «Матчи сегодня», чтобы увидеть игры.', reply_markup=reply_markup)
 
-def handle_message(update: Update, context: CallbackContext):
+async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_text = update.message.text
-
     if user_text == 'Матчи сегодня':
         matches_list = list(match_database.keys())
         if not matches_list:
-            update.message.reply_text('На сегодня матчей нет!')
+            await update.message.reply_text('На сегодня матчей нет!')
             return
         keyboard = [[match] for match in matches_list]
         reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
-        update.message.reply_text('Выберите матч:', reply_markup=reply_markup)
+        await update.message.reply_text('Выберите матч:', reply_markup=reply_markup)
     elif user_text in match_database:
         analysis = match_database[user_text]
-        update.message.reply_text(analysis)
+        await update.message.reply_text(analysis)
     else:
-        update.message.reply_text('Пожалуйста, используйте кнопки.')
+        await update.message.reply_text('Пожалуйста, используйте кнопки.')
 
 def main():
-    updater = Updater(TOKEN)
-    dispatcher = updater.dispatcher
-
-    dispatcher.add_handler(CommandHandler("start", start_command))
-    dispatcher.add_handler(MessageHandler(Filters.text & ~Filters.command, handle_message))
-
-    updater.start_polling()
-    updater.idle()
+    app = Application.builder().token(TOKEN).build()
+    app.add_handler(CommandHandler("start", start_command))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+    app.run_polling()
 
 if __name__ == '__main__':
     main()
